@@ -6,27 +6,31 @@ require('./database');
 const app = express();
 const PORT = process.env.PORT || 5000;
 
-// NUCLEAR CORS FIX - Allow everything
-app.use(cors({
-  origin: '*', // Allow ALL origins
-  credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'Accept', 'Origin', 'X-Requested-With', 'X-Requested-With']
-}));
-
-// Manual CORS headers as backup
+// NUCLEAR CORS FIX
 app.use((req, res, next) => {
-  res.header('Access-Control-Allow-Origin', '*');
-  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
-  res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, Accept, Origin, X-Requested-With');
-  res.header('Access-Control-Allow-Credentials', 'true');
+  console.log(`[${new Date().toISOString()}] ${req.method} ${req.path}`);
   
-  // Handle preflight
+  // ALLOW EVERYTHING
+  res.header('Access-Control-Allow-Origin', '*');
+  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS, PATCH, HEAD');
+  res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, Accept, Origin, X-Requested-With, X-Auth-Token, X-API-Key');
+  res.header('Access-Control-Allow-Credentials', 'true');
+  res.header('Access-Control-Max-Age', '86400');
+  
+  // Handle preflight immediately
   if (req.method === 'OPTIONS') {
-    return res.status(200).end();
+    console.log('Handling OPTIONS preflight');
+    return res.status(200).send();
   }
+  
   next();
 });
+
+// Also use CORS package as backup
+app.use(cors({
+  origin: true, // Allow all origins
+  credentials: true
+}));
 
 app.use(express.json());
 
@@ -40,10 +44,10 @@ try {
   aiRoutes = require('./routes/ai-routes');
   console.log('✅ AI routes loaded');
 } catch (error) {
-  console.log('❌ AI routes not found');
+  console.log('❌ AI routes not found, creating basic');
   aiRoutes = express.Router();
   aiRoutes.get('/test', (req, res) => {
-    res.json({ message: 'AI endpoint' });
+    res.json({ message: 'AI test endpoint', timestamp: new Date().toISOString() });
   });
 }
 
@@ -53,32 +57,32 @@ app.post('/api/auth/login', login);
 app.use('/api/tasks', tasksRouter);
 app.use('/api/ai', aiRoutes);
 
-// Health check
+// Health check with CORS test
 app.get('/api/health', (req, res) => {
   res.json({ 
     status: 'OK', 
-    message: 'AI Campus Assignment API - CORS FIXED',
+    message: 'AI Campus Backend - CORS FIXED ✅',
     timestamp: new Date().toISOString(),
-    cors: 'enabled-all-origins'
+    cors: {
+      allowOrigin: '*',
+      allowMethods: 'ALL',
+      allowHeaders: 'ALL'
+    }
   });
 });
 
-// Root
-app.get('/', (req, res) => {
+// Test endpoint
+app.get('/api/test-cors', (req, res) => {
   res.json({ 
-    message: 'AI Campus Backend - CORS FIXED',
-    endpoints: [
-      'GET /api/health',
-      'POST /api/auth/register',
-      'POST /api/auth/login',
-      'GET/POST /api/tasks',
-      'GET /api/ai/analysis'
-    ]
+    message: 'CORS test successful!',
+    frontend: 'Should work from any origin',
+    timestamp: new Date().toISOString()
   });
 });
 
 app.listen(PORT, () => {
-  console.log(`🚀 Server running on port ${PORT}`);
-  console.log(`📍 CORS: ENABLED FOR ALL ORIGINS (*)`);
-  console.log(`📍 Test: curl https://localhost:${PORT}/api/health`);
+  console.log('🚀 SERVER STARTED - CORS FIXED');
+  console.log(`📍 Port: ${PORT}`);
+  console.log('📍 CORS: ALLOWING ALL ORIGINS (*)');
+  console.log('📍 Test: curl -H "Origin: https://example.com" http://localhost:' + PORT + '/api/health');
 });
