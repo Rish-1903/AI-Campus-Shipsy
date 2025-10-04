@@ -6,19 +6,27 @@ require('./database');
 const app = express();
 const PORT = process.env.PORT || 5000;
 
-// GUARANTEED CORS FIX - Allow all origins in development
+// NUCLEAR CORS FIX - Allow everything
 app.use(cors({
-  origin: function (origin, callback) {
-    // Allow ALL origins during development
-    callback(null, true);
-  },
+  origin: '*', // Allow ALL origins
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'Accept', 'Origin', 'X-Requested-With']
+  allowedHeaders: ['Content-Type', 'Authorization', 'Accept', 'Origin', 'X-Requested-With', 'X-Requested-With']
 }));
 
-// Handle preflight requests
-app.options('*', cors());
+// Manual CORS headers as backup
+app.use((req, res, next) => {
+  res.header('Access-Control-Allow-Origin', '*');
+  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+  res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, Accept, Origin, X-Requested-With');
+  res.header('Access-Control-Allow-Credentials', 'true');
+  
+  // Handle preflight
+  if (req.method === 'OPTIONS') {
+    return res.status(200).end();
+  }
+  next();
+});
 
 app.use(express.json());
 
@@ -26,16 +34,16 @@ app.use(express.json());
 const { register, login } = require('./auth');
 const tasksRouter = require('./tasks');
 
-// Try to load AI routes
+// Load AI routes
 let aiRoutes;
 try {
   aiRoutes = require('./routes/ai-routes');
   console.log('✅ AI routes loaded');
 } catch (error) {
-  console.log('❌ AI routes not found, creating basic ones');
+  console.log('❌ AI routes not found');
   aiRoutes = express.Router();
   aiRoutes.get('/test', (req, res) => {
-    res.json({ message: 'AI endpoint working' });
+    res.json({ message: 'AI endpoint' });
   });
 }
 
@@ -49,36 +57,28 @@ app.use('/api/ai', aiRoutes);
 app.get('/api/health', (req, res) => {
   res.json({ 
     status: 'OK', 
-    message: 'AI Campus Assignment API is running',
+    message: 'AI Campus Assignment API - CORS FIXED',
     timestamp: new Date().toISOString(),
     cors: 'enabled-all-origins'
   });
 });
 
-// Root endpoint
+// Root
 app.get('/', (req, res) => {
-  res.json({
-    message: 'AI Campus Assignment Backend',
-    endpoints: {
-      health: 'GET /api/health',
-      register: 'POST /api/auth/register',
-      login: 'POST /api/auth/login',
-      tasks: 'GET/POST/PUT/DELETE /api/tasks',
-      ai: 'GET /api/ai/analysis'
-    }
-  });
-});
-
-// 404 handler
-app.use('*', (req, res) => {
-  res.status(404).json({ 
-    error: 'Route not found',
-    path: req.originalUrl
+  res.json({ 
+    message: 'AI Campus Backend - CORS FIXED',
+    endpoints: [
+      'GET /api/health',
+      'POST /api/auth/register',
+      'POST /api/auth/login',
+      'GET/POST /api/tasks',
+      'GET /api/ai/analysis'
+    ]
   });
 });
 
 app.listen(PORT, () => {
   console.log(`🚀 Server running on port ${PORT}`);
-  console.log(`📍 CORS: Enabled for ALL origins`);
-  console.log(`📍 Health: http://localhost:${PORT}/api/health`);
+  console.log(`📍 CORS: ENABLED FOR ALL ORIGINS (*)`);
+  console.log(`📍 Test: curl https://localhost:${PORT}/api/health`);
 });
