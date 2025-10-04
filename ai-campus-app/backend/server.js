@@ -13,7 +13,12 @@ app.use(cors({
   allowedHeaders: ['Content-Type', 'Authorization', 'Accept'],
   credentials: true
 }));
-
+const allowedOrigins = [
+  'http://localhost:3000',
+  'http://127.0.0.1:3000',
+  'https://ai-campus-shipsy-2.onrender.com', // Your current Render backend
+  'https://ai-campus-app.vercel.app' // We'll add this after frontend deployment
+];
 app.options('*', cors());
 app.use(express.json());
 
